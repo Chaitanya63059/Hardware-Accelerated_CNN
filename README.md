@@ -39,7 +39,34 @@ The window generator modules work in tandem with the line buffers to extract the
 
 This hardware logic ensures that the `cnn_compute_unit` is always presented with valid, aligned data. It strictly manages the boundary padding, ensuring zero values are properly injected when the convolution filter operates at the edges of the image.
 
+## Machine Learning Modules
+
+### `model.py`
+This script defines the `TinyDetector` convolutional neural network architecture using PyTorch. It is designed to be a lightweight regression model that processes spatial features using successive convolutions, max pooling, and a dense head to directly output bounding box coordinates and class confidences.
+
+By keeping the parameter count low, the model ensures inference can easily fit into the programmable logic of the FPGA. The architecture strictly uses modules that can be deterministically quantized, avoiding unsupported operations that complicate the hardware transformation.
+
+### `dataset.py`
+This module manages the data loading pipeline for training the model. It defines a custom PyTorch Dataset class that parses image files, normalizes input tensors, and standardizes corresponding target bounding box annotations for efficient batched loading.
+
+To prevent the model from overfitting and to improve generalization, the dataset class also implements crucial data augmentation strategies. These preprocessing steps ensure robust feature extraction during the neural network's forward passes.
+
+### `train.py`
+The primary script for optimizing the `TinyDetector` network. It orchestrates the training loop, defining the loss function tailored for combined coordinate regression and confidence scoring, and utilizes the Adam optimizer to update model weights over multiple epochs.
+
+It continuously monitors performance by evaluating the loss on a separate validation set, utilizing learning rate scheduling to ensure convergence. Upon completion, it exports the trained floating-point weights, laying the groundwork for the quantization phase.
+
+### `quantize_int8.py`
+This crucial script performs Post-Training Quantization (PTQ) on the trained floating-point model. It converts the full-precision weights and activations into 8-bit integers (INT8), a necessary step to drastically reduce the size and power requirements of the hardware deployment.
+
+By utilizing symmetric quantization, the script simplifies the arithmetic zero-points for the Verilog MAC units. It also calculates and explicitly exports the hardware-specific layer scaling factors and integer biases into `.mem` and `.coe` formats for direct consumption by the Vivado synthesis tool.
+
+### `detect_realtime.py` & `detection_utils.py`
+These scripts handle the software-side inference and post-processing of the model's outputs. They implement Non-Maximum Suppression (NMS) to filter redundant detections, ensuring only the most confident and unique bounding boxes are rendered onto the output image.
+
+While `detection_utils.py` provides the core mathematical functions for intersection-over-union (IoU) and coordinate un-scaling, `detect_realtime.py` wraps these utilities into a clean interface. It allows for quick visualization of the network's predictive capabilities before hardware offloading.
+
 ## Repository Structure
-- **`src/ml/`**: Contains the core Python machine learning logic. Files include the neural network definition (`model.py`), `dataset.py` for loading the image data, `train.py` for optimizing the model, `quantize_int8.py` for conversion to fixed-point precision, and `detect_realtime.py` for running bounding box predictions.
-- **`src/verilog/`**: Contains the RTL source code modules described above.
-- **`src/kria_deployment/`**: Contains execution scripts (`run_arm.py` and `run_fpga.py`) along with the synthesized `.bit` and weight configuration files to run the accelerator on the physical Kria KV260 board.
+- **`src/ml/`**: Contains the core Python machine learning logic described above.
+- **`src/verilog/`**: Contains the custom RTL source code modules.
+- **`src/kria_deployment/`**: Contains execution scripts (`run_arm.py` and `run_fpga.py`) along with the exported weight configuration files to run the accelerator directly on the physical Kria KV260 board.
