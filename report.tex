@@ -10,6 +10,13 @@
 \usetikzlibrary{shapes.geometric, arrows, positioning, fit, calc}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\makeatletter
+\newcommand{\linebreakand}{%
+  \end{@IEEEauthorhalign}
+  \hfill\mbox{}\par
+  \mbox{}\hfill\begin{@IEEEauthorhalign}
+}
+\makeatother
 
 \begin{document}
 
@@ -32,7 +39,7 @@ email@example.com}
 \textit{Organization Name}\\
 City, Country \\
 email@example.com}
-\and
+\linebreakand
 \IEEEauthorblockN{4\textsuperscript{th} Team Member 4}
 \IEEEauthorblockA{\textit{Department of Engineering} \\
 \textit{Organization Name}\\
