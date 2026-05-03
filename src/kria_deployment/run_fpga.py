@@ -269,6 +269,7 @@ def run_fpga_layer(accel_ip, dma, input_data, layer_cfg, in_h, in_w, in_buffer, 
 
     all_outputs = []
     conv_time_sec = 0.0
+    hw_cycles = 0
 
     for oc_start in range(0, c_out, 16):
         num_lanes = min(16, c_out - oc_start)
@@ -301,6 +302,12 @@ def run_fpga_layer(accel_ip, dma, input_data, layer_cfg, in_h, in_w, in_buffer, 
         dma.recvchannel.wait()
         conv_time_sec += time.perf_counter() - t_conv_start
 
+        # Calculate theoretical hardware clock cycles (input stream + output stream)
+        # cnn_compute_unit processes 1 input byte per clock cycle, then outputs 16 bytes.
+        in_cycles = c_in * in_h * in_w
+        out_cycles = 16 * conv_h * conv_w
+        hw_cycles += (in_cycles + out_cycles)
+
         # Hardware output is unsigned 8-bit [0, 127] (ReLU + saturation)
         out_all = np.array(out_buffer[:out_size], dtype=np.uint8).reshape(16, conv_h, conv_w)
         all_outputs.append(out_all[:num_lanes].copy())
@@ -325,7 +332,8 @@ def run_fpga_layer(accel_ip, dma, input_data, layer_cfg, in_h, in_w, in_buffer, 
     else:
         print()
 
-    return feature_map, feature_map_raw, out_h, out_w, conv_time_sec * 1000.0
+    hw_limit_ms = (hw_cycles / 100_000_000.0) * 1000.0
+    return feature_map, feature_map_raw, out_h, out_w, conv_time_sec * 1000.0, hw_limit_ms
 
 
 # ===================== PREPROCESSING =====================
@@ -607,22 +615,25 @@ def main():
     raw_outputs = {}  # Store raw FPGA fabric outputs before post-processing
 
     for layer_cfg in LAYERS:
-        feature_map, feature_map_raw, h, w, dt_conv = run_fpga_layer(
+        feature_map, feature_map_raw, h, w, dt_conv, hw_ms = run_fpga_layer(
             accel_ip, dma, feature_map, layer_cfg, h, w, in_buffer, out_buffer
         )
-        layer_times.append((layer_cfg[0], dt_conv))
+        layer_times.append((layer_cfg[0], dt_conv, hw_ms))
         raw_outputs[layer_cfg[0]] = feature_map_raw  # Save raw output
 
     t_total_end2end = (time.perf_counter() - t_start) * 1000
-    t_total_conv = sum(ms for _, ms in layer_times)
+    t_total_conv = sum(ms for _, _, _ in layer_times)
+    t_total_hw = sum(hw for _, _, hw in layer_times)
 
     print(f"\n[4/5] Convolution Timing")
-    print(f"\n  Details:")
-    for name, ms in layer_times:
-        print(f"    {name}: {ms:.1f} ms")
-    print(f"    {'_' * 30}")
-    print(f"    Total Conv Time: {t_total_conv:.1f} ms")
-    print(f"    Conv FPS:        {1000 / t_total_conv:.1f}")
+    print(f"\n  Details (Measured with OS Interrupt Latency vs Theoretical Hardware Limit @ 100MHz):")
+    for name, ms, hw_ms in layer_times:
+        print(f"    {name:<10}: Measured = {ms:>5.1f} ms  |  Hardware Limit = {hw_ms:>5.1f} ms")
+    print(f"    {'_' * 60}")
+    print(f"    Total Measured Time (with PYNQ overhead): {t_total_conv:.1f} ms")
+    print(f"    Total Theoretical HW Limit (@100MHz):     {t_total_hw:.1f} ms")
+    print(f"    Measured FPS:      {1000 / max(1e-6, t_total_conv):.1f}")
+    print(f"    Theoretical HW FPS:{1000 / max(1e-6, t_total_hw):.1f}")
 
     print(f"\n  Raw output: shape={feature_map.shape}, "
           f"range=[{feature_map.min():.1f}, {feature_map.max():.1f}]")
