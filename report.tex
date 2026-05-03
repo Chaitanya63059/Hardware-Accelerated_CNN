@@ -8,16 +8,19 @@
 \usepackage{xcolor}
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows, positioning, fit, calc}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 \begin{document}
 
 \title{Design and Implementation of a 16-Parallel Convolutional Neural Network Accelerator on Kria KV260}
 
-\author{\IEEEauthorbot{\IEEEauthorblockN{1\textsuperscript{st} Chaitanya}
+\author{\IEEEauthorblockN{1\textsuperscript{st} Chaitanya}
 \IEEEauthorblockA{\textit{Department of Engineering} \\
+\textit{Organization Name}\\
 City, Country \\
 chaitanya63059@github}
-}}
+}
 
 \maketitle
 
@@ -150,5 +153,15 @@ The hardware accelerator achieved a substantial inference speedup compared to pu
 This project demonstrates a robust, automated pipeline for taking a conceptual CNN through dataset engineering, quantization, RTL simulation, and final hardware deployment on an advanced FPGA System-on-Module. The resulting 16-parallel accelerator provides a highly scalable template for future embedded vision applications. 
 
 Future work will focus on integrating larger, more complex architectures like YOLOv8 into the hardware constraints, optimizing the AXI bus width to support 32-parallel or 64-parallel compute units, and exploring asymmetric quantization to fully utilize the dynamic range of the data.
+
+\section*{Acknowledgment}
+
+The author would like to acknowledge the open-source community for the tools that made this project possible, including the PyTorch, Icarus Verilog, and PYNQ frameworks, as well as the support from the hardware acceleration community.
+
+\begin{thebibliography}{00}
+\bibitem{b1} Xilinx, ``Kria KV260 Vision AI Starter Kit,'' Xilinx, Inc., San Jose, CA, 2021.
+\bibitem{b2} A. Paszke et al., ``PyTorch: An Imperative Style, High-Performance Deep Learning Library,'' in Advances in Neural Information Processing Systems 32, 2019, pp. 8024--8035.
+\bibitem{b3} S. Han, H. Mao, and W. J. Dally, ``Deep compression: Compressing deep neural networks with pruning, trained quantization and huffman coding,'' arXiv preprint arXiv:1510.00149, 2015.
+\end{thebibliography}
 
 \end{document}
