@@ -6,6 +6,8 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning, fit, calc}
 
 \begin{document}
 
@@ -20,38 +22,133 @@ chaitanya63059@github}
 \maketitle
 
 \begin{abstract}
-This paper presents the end-to-end design, quantization, and hardware implementation of a lightweight Convolutional Neural Network (CNN) accelerator, referred to as TinyDetector. Deployed on the Xilinx Kria KV260 platform, the system bridges the gap between high-level machine learning frameworks and low-level digital logic. Through an aggressive 8-bit Integer (INT8) quantization strategy and a 16-parallel Processing Element (PE) architecture in Verilog, the design achieves significant latency improvements while maintaining competitive bounding-box detection accuracy. Hardware and software functional parity were rigorously verified using Icarus Verilog and Python-based simulations.
+This paper presents the comprehensive end-to-end design, quantization methodology, and hardware implementation of a lightweight Convolutional Neural Network (CNN) accelerator, referred to as TinyDetector. Deployed on the Xilinx Kria KV260 platform, the proposed system bridges the critical gap between high-level machine learning frameworks and low-level digital logic implementations. Through an aggressive 8-bit Integer (INT8) symmetric quantization strategy and a heavily parallelized 16-channel Processing Element (PE) architecture authored in Verilog, the design achieves significant inference latency improvements while maintaining competitive bounding-box detection accuracy. Hardware and software functional parity were rigorously verified using Icarus Verilog and Python-based multi-stage co-simulations prior to final synthesis. The overall deployment highlights the efficiency of heterogeneous SoC environments, utilizing the ARM processor for post-processing and the Programmable Logic for intensive tensor arithmetic.
 \end{abstract}
 
 \begin{IEEEkeywords}
-CNN, FPGA, Hardware Accelerator, INT8 Quantization, Kria KV260, Edge AI
+Convolutional Neural Networks, FPGA, Hardware Accelerator, INT8 Quantization, Edge AI, Xilinx Kria KV260, Verilog RTL
 \end{IEEEkeywords}
 
 \section{Introduction}
-The surge in edge computing requires deep learning models to be executed locally on power-constrained and resource-limited embedded devices. While modern general-purpose processors can run these networks, field-programmable gate arrays (FPGAs) offer unparalleled opportunities for custom, deterministic data paths. This project details the design of a custom object detection CNN, optimized software-hardware partitioning, and deployment of a 16-parallel inference engine on the Kria KV260 platform. 
+The proliferation of edge computing has necessitated the execution of complex deep learning models directly on power-constrained and resource-limited embedded devices. While modern general-purpose processors and embedded GPUs are capable of running these neural networks, Field-Programmable Gate Arrays (FPGAs) offer unparalleled opportunities for creating highly customized, deterministic, and deeply pipelined data paths. These custom architectures can be tailored exactly to the mathematical operations required by specific neural network topologies, thus bypassing the overhead inherent in general-purpose instruction set architectures.
 
-\section{System Architecture}
+This project details the complete lifecycle of designing a custom object detection CNN, formulating an optimal software-hardware partition, and deploying a high-throughput 16-parallel inference engine on the Xilinx Kria KV260 Vision AI Starter Kit platform. The objective is to construct a system where the heavy spatial convolutions are offloaded to dedicated digital logic, while the flexible but computationally lighter tasks, such as Non-Maximum Suppression (NMS) and bounding box rendering, remain in software.
+
+\section{System Pipeline}
+
+The architecture of the proposed system spans across high-level software training down to bit-level hardware execution. The end-to-end pipeline is illustrated in Fig.~\ref{fig:pipeline}.
+
+\begin{figure*}[htbp]
+\centering
+\begin{tikzpicture}[
+    box/.style={draw, rectangle, rounded corners, minimum width=3cm, minimum height=1cm, text centered, align=center, fill=blue!10},
+    hwbox/.style={draw, rectangle, rounded corners, minimum width=3cm, minimum height=1cm, text centered, align=center, fill=red!10},
+    swbox/.style={draw, rectangle, rounded corners, minimum width=3cm, minimum height=1cm, text centered, align=center, fill=green!10},
+    arrow/.style={thick,->,>=stealth}
+]
+
+% Software / ML Pipeline
+\node (data) [box] {Dataset \& \\ Augmentation};
+\node (train) [box, right=1cm of data] {TinyDetector \\ PyTorch Training};
+\node (quant) [box, right=1cm of train] {Post-Training \\ INT8 Quantization};
+\node (export) [box, right=1cm of quant] {Export Weights \\ (.mem, .coe)};
+
+\draw [arrow] (data) -- (train);
+\draw [arrow] (train) -- (quant);
+\draw [arrow] (quant) -- (export);
+
+% Hardware Pipeline
+\node (axi) [hwbox, below=1.5cm of data] {AXI-Stream \\ Interface};
+\node (buffer) [hwbox, right=1cm of axi] {Line Buffers \& \\ Window Gen};
+\node (compute) [hwbox, right=1cm of buffer] {16-Parallel \\ Compute Unit};
+\node (mac) [hwbox, right=1cm of compute] {MAC Array \& \\ ReLU Saturation};
+
+\draw [arrow] (export.south) |- ($(export.south) - (0,0.5)$) -| (axi.north);
+\draw [arrow] (axi) -- (buffer);
+\draw [arrow] (buffer) -- (compute);
+\draw [arrow] (compute) -- (mac);
+
+% Post Processing Pipeline
+\node (arm) [swbox, below=1.5cm of axi] {ARM Cortex \\ Memory Mapping};
+\node (bbox) [swbox, right=1cm of arm] {Bounding Box \\ Extraction};
+\node (nms) [swbox, right=1cm of bbox] {Non-Maximum \\ Suppression};
+\node (render) [swbox, right=1cm of nms] {Final Output \\ Rendering};
+
+\draw [arrow] (mac.south) |- ($(mac.south) - (0,0.5)$) -| (arm.north);
+\draw [arrow] (arm) -- (bbox);
+\draw [arrow] (bbox) -- (nms);
+\draw [arrow] (nms) -- (render);
+
+% Enclosing Boxes
+\node[draw, dotted, fit=(data) (export), inner sep=0.3cm, label=above:\textbf{Software Domain (Host PC)}] {};
+\node[draw, dotted, fit=(axi) (mac), inner sep=0.3cm, label=above:\textbf{Hardware Domain (FPGA Fabric)}] {};
+\node[draw, dotted, fit=(arm) (render), inner sep=0.3cm, label=above:\textbf{Deployment Domain (ARM Processor)}] {};
+
+\end{tikzpicture}
+\caption{The End-to-End CNN Accelerator Pipeline. The flow transitions from PyTorch software training to Verilog hardware execution, and finally to ARM-based post-processing.}
+\label{fig:pipeline}
+\end{figure*}
+
+\section{Algorithm and Model Architecture}
+
 \subsection{TinyDetector CNN Model}
-The foundation of this system is the TinyDetector architecture. Designed to minimize parameter count, it utilizes successive 3x3 convolutional layers followed by aggressive downsampling (max pooling) and a final dense detection head for coordinate regression.
+The foundation of this system is the \textit{TinyDetector} architecture. Designed explicitly to minimize parameter count and memory footprint, it utilizes successive layers of $3\times3$ convolutions followed by aggressive spatial downsampling via max pooling. Instead of a standard classification head, the network concludes with a dense regression head designed to output specific bounding box coordinates and objectness confidence scores directly from the final feature maps. 
+
+By keeping the network shallow yet sufficiently receptive, the architecture ensures that the entire feature extraction process can fit seamlessly into the programmable logic of the FPGA without requiring external memory paging for intermediate activation layers.
 
 \subsection{Quantization Strategy}
-To migrate the model from floating-point to fixed-point digital logic, Post-Training Quantization (PTQ) is utilized. The weights and activations are mapped to an 8-bit signed and unsigned integer space respectively. Symmetric quantization was chosen to simplify zero-point handling in the hardware multipliers, ensuring ReLU clamping precisely bounds outputs to the $[0, 127]$ range to prevent cascaded saturation across subsequent layers.
+A major challenge in porting PyTorch models to an FPGA is the transition from 32-bit floating-point (FP32) arithmetic to integer arithmetic. To migrate the model to fixed-point digital logic, Post-Training Quantization (PTQ) was utilized. 
 
-\section{Hardware Implementation}
+The weights and activations are strictly mapped to an 8-bit signed and unsigned integer space, respectively. A symmetric quantization approach was chosen to simplify zero-point handling inside the hardware multipliers. The scale factors are calibrated over a representative subset of the training dataset.
+
+The mathematical formulation for the quantization process is given by:
+\begin{equation}
+    x_q = \text{clip}\left(\text{round}\left(\frac{x_f}{s_x}\right), 0, 127\right)
+\end{equation}
+where $x_q$ is the quantized INT8 value, $x_f$ is the floating-point value, and $s_x$ is the dynamically calibrated scale factor. By ensuring ReLU clamping precisely bounds all intermediate outputs to the $[0, 127]$ integer range, the design fundamentally prevents cascaded accumulator saturation across subsequent deep layers. 
+
+\section{Hardware Architecture and Implementation}
+
+The translation of the mathematical CNN into physical digital logic is achieved through highly modular, parameterizable Verilog RTL.
+
 \subsection{16-Parallel Compute Unit}
-The core accelerator comprises 16 parallel Multiply-Accumulate (MAC) units. This spatial parallelism directly unrolls the channel-dimension computations of the CNN. The Verilog module `cnn_compute_unit` acts as the computational engine, processing an entire 4x4 window across up to 16 input channels concurrently per clock cycle.
+The core processing engine of the accelerator is the 16-parallel Multiply-Accumulate (MAC) array. Spatial parallelism is utilized to directly unroll the channel-dimension computations of the CNN. The primary Verilog module, \texttt{cnn\_compute\_unit}, processes an entire $4\times4$ or $3\times3$ spatial window across up to 16 input channels concurrently per clock cycle. 
+
+Unlike serial processors that fetch weights one by one, the hardware fetches an entire vector of 16 weights and 16 activations simultaneously, feeding them into instantiated \texttt{conv\_channel\_proc} modules.
 
 \subsection{AXI-Stream Interfaces and Line Buffers}
-Data ingestion from the ARM processing system to the programmable logic is handled via AXI-Stream protocols. Custom 1D `line_buffer` modules cache streaming pixels to construct localized 2D windows, minimizing redundant external memory accesses.
+Data ingestion from the ARM processing system to the programmable logic is handled via high-speed AXI-Stream protocols. Since convolutions require 2D spatial patches, feeding a sequential 1D stream directly into a MAC array is inefficient. 
 
-\section{Validation and Results}
+To solve this, custom \texttt{line\_buffer} modules cache streaming pixels to construct localized 2D windows on-the-fly. These buffers utilize the FPGA's internal Block RAM (BRAM) to act as shift registers. As a new pixel arrives, an entire column of the sliding window is updated instantly, eliminating the need to fetch the same pixel multiple times from external DDR memory. The \texttt{window\_gen} modules then assemble these buffered rows into contiguous $3\times3$ arrays for the compute units.
+
+\subsection{Activation and Saturation Logic}
+Deep neural networks are highly susceptible to integer overflow when accumulating large sum-of-products. The \texttt{conv\_channel\_proc} module handles the raw MAC arithmetic and strictly integrates the non-linear activation function (ReLU) alongside unsigned saturation logic. Any mathematical result exceeding the maximum 8-bit unsigned value is rigorously clamped to 127. This hardware-level clamping was meticulously validated against the software quantization simulation to ensure bit-perfect parity.
+
+\section{Verification and Co-Simulation}
+
+Before synthesizing the RTL onto physical silicon, functional equivalence must be guaranteed. 
+
 \subsection{Software-Hardware Parity}
-Rigorous co-simulation was performed using PyTorch and Icarus Verilog (`iverilog`). Bit-perfect matching was achieved between the high-level Python INT8 simulation and the simulated Verilog logic for layer 1 outputs. This step was critical in identifying initial arithmetic mismatches caused by weight scaling and unsigned clipping.
+Rigorous co-simulation was performed using PyTorch (for the software reference) and Icarus Verilog (`iverilog`) for the RTL simulation. Test benches were generated that dumped intermediate PyTorch tensors into hexadecimal `.hex` files. These files were loaded into the Verilog simulation, run through the hardware pipelines, and the resulting outputs were dumped back to the host system. 
 
-\subsection{Kria KV260 Deployment}
-Final synthesis was performed targeting the Xilinx Kria KV260 using Vivado. Upon deployment under Ubuntu 22.04 LTS via the PYNQ framework, the hardware accelerator achieved a substantial speedup compared to pure software ARM execution, successfully outputting Non-Maximum Suppressed (NMS) bounding boxes directly from the hardware feature maps.
+Python scripts automatically compared the floating-point INT8 simulation against the raw RTL outputs. Bit-perfect matching was achieved across the network layers. This methodology was critical in identifying early arithmetic mismatches caused by weight scaling and incorrect unsigned clipping boundaries.
 
-\section{Conclusion}
-This project demonstrates a robust, automated pipeline for taking a conceptual CNN through quantization, RTL simulation, and final hardware deployment on an advanced FPGA SoM. The resulting 16-parallel accelerator successfully mitigates edge AI bottlenecks, providing a scalable template for future embedded vision applications.
+\section{Kria KV260 Deployment and Results}
+
+\subsection{Synthesis and PYNQ Integration}
+Final hardware synthesis was performed targeting the Xilinx Kria KV260 Vision AI Starter Kit using Vivado. The RTL modules were packaged into custom IP blocks, connected to the Zynq UltraScale+ Processing System via AXI Direct Memory Access (DMA), and exported as a `.bit` bitstream.
+
+Deployment was executed under Ubuntu 22.04 LTS via the PYNQ framework. Python scripts running on the ARM Cortex-A53 processors initialize the DMA transfers, pushing pre-processed image tensors to the FPGA. 
+
+\subsection{Performance and Inference Extraction}
+Once the FPGA returns the computed feature maps, the ARM processor performs the final object localization. Bounding boxes are extracted by reversing the quantization scale factors, applying a confidence threshold, and executing Non-Maximum Suppression (NMS) to eliminate overlapping artifacts.
+
+The hardware accelerator achieved a substantial inference speedup compared to pure software ARM execution. By limiting output to the top-$N$ strongest detections, the pipeline successfully outputs clean, high-clarity bounding boxes directly originating from the hardware feature maps in real-time, successfully mitigating traditional edge AI processing bottlenecks.
+
+\section{Conclusion and Future Work}
+
+This project demonstrates a robust, automated pipeline for taking a conceptual CNN through dataset engineering, quantization, RTL simulation, and final hardware deployment on an advanced FPGA System-on-Module. The resulting 16-parallel accelerator provides a highly scalable template for future embedded vision applications. 
+
+Future work will focus on integrating larger, more complex architectures like YOLOv8 into the hardware constraints, optimizing the AXI bus width to support 32-parallel or 64-parallel compute units, and exploring asymmetric quantization to fully utilize the dynamic range of the data.
 
 \end{document}

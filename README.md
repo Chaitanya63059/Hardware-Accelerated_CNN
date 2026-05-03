@@ -7,6 +7,30 @@ The pipeline begins with a lightweight PyTorch CNN called `TinyDetector`, specif
 
 After quantization, the neural network architecture is translated into Verilog RTL. The hardware design is highly customized around a 16-parallel Processing Element (PE) matrix, accelerating channel-wise convolutions. Vivado is used to package these modules, attach AXI-Stream interfaces, and synthesize the bitstream (`.bit`) for the Xilinx Kria KV260 platform. Finally, the PYNQ framework is utilized on the KV260 board running Ubuntu 22.04 to stream images to the hardware accelerator, retrieve the computed feature maps, apply Non-Maximum Suppression (NMS), and render the final bounding boxes onto the image in real-time.
 
+### Pipeline Architecture
+
+```mermaid
+graph TD
+    subgraph "PyTorch Software Space (Host PC)"
+        A[Dataset & Augmentation] --> B[TinyDetector CNN Training]
+        B --> C[Post-Training INT8 Quantization]
+        C --> D[Export Weights & Scales .mem/.coe]
+    end
+
+    subgraph "FPGA Hardware Space (Kria KV260)"
+        D --> E[Line Buffers & Window Generators]
+        E --> F[16-Parallel CNN Compute Unit]
+        F --> G[Conv Channel Proc MAC + ReLU Saturation]
+        G --> H[Feature Map Output AXI-Stream]
+    end
+
+    subgraph "ARM Post-Processing (Kria KV260)"
+        H --> I[Bounding Box Extraction]
+        I --> J[Non-Maximum Suppression NMS]
+        J --> K[Final Rendered Image]
+    end
+```
+
 ## Hardware Modules
 
 ### `cnn_pipeline_top.v`
