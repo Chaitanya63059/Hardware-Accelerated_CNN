@@ -1,0 +1,57 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+
+\begin{document}
+
+\title{Design and Implementation of a 16-Parallel Convolutional Neural Network Accelerator on Kria KV260}
+
+\author{\IEEEauthorbot{\IEEEauthorblockN{1\textsuperscript{st} Chaitanya}
+\IEEEauthorblockA{\textit{Department of Engineering} \\
+City, Country \\
+chaitanya63059@github}
+}}
+
+\maketitle
+
+\begin{abstract}
+This paper presents the end-to-end design, quantization, and hardware implementation of a lightweight Convolutional Neural Network (CNN) accelerator, referred to as TinyDetector. Deployed on the Xilinx Kria KV260 platform, the system bridges the gap between high-level machine learning frameworks and low-level digital logic. Through an aggressive 8-bit Integer (INT8) quantization strategy and a 16-parallel Processing Element (PE) architecture in Verilog, the design achieves significant latency improvements while maintaining competitive bounding-box detection accuracy. Hardware and software functional parity were rigorously verified using Icarus Verilog and Python-based simulations.
+\end{abstract}
+
+\begin{IEEEkeywords}
+CNN, FPGA, Hardware Accelerator, INT8 Quantization, Kria KV260, Edge AI
+\end{IEEEkeywords}
+
+\section{Introduction}
+The surge in edge computing requires deep learning models to be executed locally on power-constrained and resource-limited embedded devices. While modern general-purpose processors can run these networks, field-programmable gate arrays (FPGAs) offer unparalleled opportunities for custom, deterministic data paths. This project details the design of a custom object detection CNN, optimized software-hardware partitioning, and deployment of a 16-parallel inference engine on the Kria KV260 platform. 
+
+\section{System Architecture}
+\subsection{TinyDetector CNN Model}
+The foundation of this system is the TinyDetector architecture. Designed to minimize parameter count, it utilizes successive 3x3 convolutional layers followed by aggressive downsampling (max pooling) and a final dense detection head for coordinate regression.
+
+\subsection{Quantization Strategy}
+To migrate the model from floating-point to fixed-point digital logic, Post-Training Quantization (PTQ) is utilized. The weights and activations are mapped to an 8-bit signed and unsigned integer space respectively. Symmetric quantization was chosen to simplify zero-point handling in the hardware multipliers, ensuring ReLU clamping precisely bounds outputs to the $[0, 127]$ range to prevent cascaded saturation across subsequent layers.
+
+\section{Hardware Implementation}
+\subsection{16-Parallel Compute Unit}
+The core accelerator comprises 16 parallel Multiply-Accumulate (MAC) units. This spatial parallelism directly unrolls the channel-dimension computations of the CNN. The Verilog module `cnn_compute_unit` acts as the computational engine, processing an entire 4x4 window across up to 16 input channels concurrently per clock cycle.
+
+\subsection{AXI-Stream Interfaces and Line Buffers}
+Data ingestion from the ARM processing system to the programmable logic is handled via AXI-Stream protocols. Custom 1D `line_buffer` modules cache streaming pixels to construct localized 2D windows, minimizing redundant external memory accesses.
+
+\section{Validation and Results}
+\subsection{Software-Hardware Parity}
+Rigorous co-simulation was performed using PyTorch and Icarus Verilog (`iverilog`). Bit-perfect matching was achieved between the high-level Python INT8 simulation and the simulated Verilog logic for layer 1 outputs. This step was critical in identifying initial arithmetic mismatches caused by weight scaling and unsigned clipping.
+
+\subsection{Kria KV260 Deployment}
+Final synthesis was performed targeting the Xilinx Kria KV260 using Vivado. Upon deployment under Ubuntu 22.04 LTS via the PYNQ framework, the hardware accelerator achieved a substantial speedup compared to pure software ARM execution, successfully outputting Non-Maximum Suppressed (NMS) bounding boxes directly from the hardware feature maps.
+
+\section{Conclusion}
+This project demonstrates a robust, automated pipeline for taking a conceptual CNN through quantization, RTL simulation, and final hardware deployment on an advanced FPGA SoM. The resulting 16-parallel accelerator successfully mitigates edge AI bottlenecks, providing a scalable template for future embedded vision applications.
+
+\end{document}

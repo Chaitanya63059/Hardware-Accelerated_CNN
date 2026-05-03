@@ -1,0 +1,114 @@
+IMG_WIDTH=        128
+IMG_HEIGHT=        128
+IN_CHANNELS=          3
+KERNEL_MODE=          2
+STRIDE=          2
+WEIGHT_CNT=         48
+OUT_SHIFT=         13
+IN_PIXELS=      49152
+Time 0: FSM State changed to  0
+Reading files...
+WARNING: tb_cnn_pipeline.v:161: $readmemh(image_in.hex): Not enough words in the file for the requested range [0:499999].
+WARNING: tb_cnn_pipeline.v:162: $readmemh(weights.hex): Not enough words in the file for the requested range [0:32767].
+Configuring registers...
+Loading biases and weights...
+Sending start pulse...
+Time 94605000: FSM State changed to  1
+Time 94615000: FSM State changed to  2
+Internal Reg Start: 1, 
+State:  2, 
+Kernel mode: 2, 
+Image WxH:   128x  128(real:   128x  128), 
+Load Cnt:  2
+Streaming image data...
+Time 94785000: FSM State changed to  3
+Sent           0 pixels
+Sent         512 pixels
+Sent        1024 pixels
+Sent        1536 pixels
+Sent        2048 pixels
+Sent        2560 pixels
+Sent        3072 pixels
+Sent        3584 pixels
+Sent        4096 pixels
+Sent        4608 pixels
+Sent        5120 pixels
+Sent        5632 pixels
+Sent        6144 pixels
+Sent        6656 pixels
+Sent        7168 pixels
+Sent        7680 pixels
+Sent        8192 pixels
+Sent        8704 pixels
+Sent        9216 pixels
+Sent        9728 pixels
+Sent       10240 pixels
+Sent       10752 pixels
+Sent       11264 pixels
+Sent       11776 pixels
+Sent       12288 pixels
+Sent       12800 pixels
+Sent       13312 pixels
+Sent       13824 pixels
+Sent       14336 pixels
+Sent       14848 pixels
+Sent       15360 pixels
+Sent       15872 pixels
+Time 258625000: FSM State changed to  4
+Time 260075000: FSM State changed to  5
+Time 260085000: FSM State changed to  2
+Time 260255000: FSM State changed to  3
+Sent       16384 pixels
+Sent       16896 pixels
+Sent       17408 pixels
+Sent       17920 pixels
+Sent       18432 pixels
+Sent       18944 pixels
+Sent       19456 pixels
+Sent       19968 pixels
+Sent       20480 pixels
+Sent       20992 pixels
+Sent       21504 pixels
+Sent       22016 pixels
+Sent       22528 pixels
+Sent       23040 pixels
+Sent       23552 pixels
+Sent       24064 pixels
+Sent       24576 pixels
+Sent       25088 pixels
+Sent       25600 pixels
+Sent       26112 pixels
+Sent       26624 pixels
+Sent       27136 pixels
+Sent       27648 pixels
+Sent       28160 pixels
+Sent       28672 pixels
+Sent       29184 pixels
+Sent       29696 pixels
+Sent       30208 pixels
+Sent       30720 pixels
+Sent       31232 pixels
+Sent       31744 pixels
+Sent       32256 pixels
+Time 424095000: FSM State changed to  4
+Time 425545000: FSM State changed to  5
+Time 425555000: FSM State changed to  2
+Time 425725000: FSM State changed to  3
+Sent       32768 pixels
+Sent       33280 pixels
+Sent       33792 pixels
+Sent       34304 pixels
+WARNING: tb_behavioral_conv.v:42: $readmemh(image_in.hex): Not enough words in the file for the requested range [0:799999].
+WARNING: tb_behavioral_conv.v:43: $readmemh(weights.hex): Not enough words in the file for the requested range [0:65535].
+tb_behavioral_conv.v:105: $finish called at 0 (1ps)
+vvp sim.vvp +IMG_WIDTH=128 +IMG_HEIGHT=128 +IN_CHANNELS=3 +KERNEL_MODE=2 +STRIDE=2 +WEIGHT_CNT=48 +IN_PIXELS=49152 +OUT_SHIFT=13
+WARNING: tb_behavioral_conv.v:42: $readmemh(image_in.hex): Not enough words in the file for the requested range [0:799999].
+WARNING: tb_behavioral_conv.v:43: $readmemh(weights.hex): Not enough words in the file for the requested range [0:65535].
+tb_behavioral_conv.v:105: $finish called at 0 (1ps)
+vvp sim.vvp +IMG_WIDTH=128 +IMG_HEIGHT=128 +IN_CHANNELS=3 +KERNEL_MODE=2 +STRIDE=2 +WEIGHT_CNT=48 +IN_PIXELS=49152 +OUT_SHIFT=13
+WARNING: tb_behavioral_conv.v:42: $readmemh(image_in.hex): Not enough words in the file for the requested range [0:799999].
+WARNING: tb_behavioral_conv.v:43: $readmemh(weights.hex): Not enough words in the file for the requested range [0:65535].
+WARNING: tb_behavioral_conv.v:42: $readmemh(image_in.hex): Not enough words in the file for the requested range [0:799999].
+WARNING: tb_behavioral_conv.v:43: $readmemh(weights.hex): Not enough words in the file for the requested range [0:65535].
+tb_behavioral_conv.v:105: $finish called at 0 (1ps)
+vvp sim.vvp +IMG_WIDTH=7 +IMG_HEIGHT=7 +IN_CHANNELS=128 +KERNEL_MODE=0 +STRIDE=1 +WEIGHT_CNT=2048 +IN_PIXELS=6272 +OUT_SHIFT=4

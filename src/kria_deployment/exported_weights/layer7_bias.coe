@@ -1,0 +1,10 @@
+; Exported from TinyDetector7Layer
+; Shape: (6,), Bits: 16
+memory_initialization_radix=16;
+memory_initialization_vector=
+03E2,
+03E1,
+03DF,
+03E1,
+03E1,
+03E0;
