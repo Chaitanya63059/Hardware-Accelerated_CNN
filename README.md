@@ -64,6 +64,8 @@ All 7 conv layers run on the FPGA. The ARM only handles the lightweight post-pro
 | ARM Cortex-A53 (software only) | ~2200 ms | 0.45 |
 | **Our FPGA accelerator** | **76.5 ms** | **13.1** |
 
+> **Note:** The FPGA inference time is measured at a **100 MHz clock frequency** on the Kria KV260 fabric.
+
 That's roughly a **28x speedup** over pure software.
 
 ![Detection result from FPGA](images/fpga_result.png)
