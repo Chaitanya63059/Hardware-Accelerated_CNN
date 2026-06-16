@@ -15,26 +15,33 @@ The network (`TinyDetector`) is a small 7-layer CNN that detects objects (people
 
 ### Pipeline Overview
 
-```mermaid
-graph TD
-    subgraph "Training (Host PC)"
-        A[Dataset & Augmentation] --> B[Train TinyDetector]
-        B --> C[INT8 Quantization]
-        C --> D[Export .mem/.coe Weights]
-    end
-
-    subgraph "FPGA (Kria KV260)"
-        D --> E[Line Buffers & Window Generators]
-        E --> F[16-Parallel Compute Unit]
-        F --> G[MAC + ReLU + Saturation]
-        G --> H[Output via AXI-Stream]
-    end
-
-    subgraph "ARM Post-Processing"
-        H --> I[Bounding Box Decode]
-        I --> J[NMS]
-        J --> K[Final Image]
-    end
+```
+Training (Host PC)
+  Dataset & Augmentation
+       |
+  Train TinyDetector
+       |
+  INT8 Quantization
+       |
+  Export .mem/.coe Weights
+       |
+       v
+FPGA (Kria KV260)
+  Line Buffers & Window Generators
+       |
+  16-Parallel Compute Unit
+       |
+  MAC + ReLU + Saturation
+       |
+  Output via AXI-Stream
+       |
+       v
+ARM Post-Processing
+  Bounding Box Decode
+       |
+  NMS
+       |
+  Final Image
 ```
 
 ## Results
@@ -70,8 +77,8 @@ That's roughly a **28x speedup** over pure software.
 | `conv_channel_proc.v` | Does the actual multiply-accumulate math for one channel. Also handles ReLU and clamps output to [0, 127]. |
 | `conv_engine.v` | Manages the sliding window — feeds the right pixels and weights to the compute unit each cycle. |
 | `line_buffer.v` | Stores rows of pixels in BRAM so we don't have to keep fetching from DDR. |
-| `window_gen_3x3.v` | Builds 3×3 patches from the line buffer output for the conv kernel. |
-| `window_gen_4x4.v` | Same idea but for 4×4 patches (used in the first layer with stride 2). |
+| `window_gen_3x3.v` | Builds 3x3 patches from the line buffer output for the conv kernel. |
+| `window_gen_4x4.v` | Same idea but for 4x4 patches (used in the first layer with stride 2). |
 
 ## Python Scripts
 
@@ -88,13 +95,14 @@ That's roughly a **28x speedup** over pure software.
 ## Folder Structure
 
 ```
-src/
-├── ml/                    # All the Python training & quantization code
 ├── verilog/               # The 7 Verilog RTL source files
-└── kria_deployment/       # Scripts to run on the KV260 board
-    ├── run_fpga.py        # Main FPGA inference script
-    ├── run_arm.py         # ARM-only baseline (for comparison)
-    └── exported_weights/  # INT8 weights, biases, scales
+├── ml/                    # Python training & quantization code
+├── fpga_python/           # Scripts to run on the KV260 board
+│   ├── run_fpga.py        # Main FPGA inference script
+│   ├── run_arm.py         # ARM-only baseline (for comparison)
+│   └── exported_weights/  # INT8 weights, biases, scales
+├── images/                # Result screenshots
+└── README.md
 ```
 
 ## How to Run on the Kria KV260
@@ -106,9 +114,6 @@ python3 run_fpga.py
 ```
 
 Make sure the bitstream (`.bit`) and weight files are in the same directory.
-
-## Team
-- Chaitanya & team
 
 ## Built With
 - PyTorch (training & quantization)

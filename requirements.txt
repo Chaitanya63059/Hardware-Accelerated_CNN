@@ -1,8 +1,0 @@
-torch
-torchvision
-pycocotools
-albumentations
-matplotlib
-tqdm
-numpy
-opencv-python
