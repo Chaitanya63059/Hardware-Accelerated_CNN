@@ -31,6 +31,30 @@ graph TD
     end
 ```
 
+## System Performance & Implementation Results
+
+### FPGA Resource Utilization (Kria KV260)
+The 16-parallel hardware engine is synthesized on the Zynq UltraScale+ programmable logic. The following table (derived from the Vivado implementation run) highlights the highly efficient hardware utilization, leaving ample logic for future architectural expansion.
+
+| Resource | Used | Available | Utilization (%) |
+|----------|------|-----------|-----------------|
+| LUT | 14,005 | 117,120 | 11.96% |
+| FF | 21,421 | 234,240 | 9.15% |
+| BRAM (36Kb)| 98 | 144 | 68.06% |
+| DSP | 419 | 1,248 | 33.57% |
+
+### Inference Latency Comparison
+The execution pipeline runs all convolutional layers (Layers 1-7) deeply pipelined on the FPGA fabric, while only the bounding box extraction, NMS, and post-processing run on the embedded ARM Cortex-A53 processor.
+
+| Execution Platform | Total Conv Time (ms) | Frames Per Second (FPS) |
+|--------------------|----------------------|-------------------------|
+| ARM Cortex-A53 (Pure Software) | ~2200.0 | 0.45 |
+| **FPGA Execution** | **76.5** | **13.1** |
+
+This yields a **28x speedup** in convolutional inference time by utilizing the Programmable Logic.
+
+![FPGA Hardware Detection Result](../images/fpga_result.png)
+
 ## Hardware Modules
 
 ### `cnn_pipeline_top.v`

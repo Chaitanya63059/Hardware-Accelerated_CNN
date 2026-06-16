@@ -86,6 +86,11 @@ IMAGE_PATH = "/home/ubuntu/cnn_accelerator/person_test.jpg"
 # Resize to 126 so that after pad=1, layer1 gets exactly 128 (MAX_WIDTH limit)
 INPUT_SIZE = 126
 
+# Must match run_iverilog_postprocess.py and the exported calibration metadata.
+# These map raw layer7 bytes [0, 127] back into the logit range used by decode.
+LAYER7_DEQUANT_ZERO_POINT = 88.52
+LAYER7_DEQUANT_SCALE = 31.99
+
 WEIGHTS_CACHE = {}
 
 # ===================== HELPERS =====================
@@ -638,11 +643,10 @@ def main():
     print(f"\n  Raw output: shape={feature_map.shape}, "
           f"range=[{feature_map.min():.1f}, {feature_map.max():.1f}]")
 
-    # Scale ONLY the final layer7 output to logit range for decode
-    # Map hardware integers [0, 127] back to PyTorch float logits.
-    # Calibrated from actual weights using linear regression:
-    feature_map = (feature_map - 88.52) / 31.99
-    print(f"  Scaled output: range=[{feature_map.min():.1f}, {feature_map.max():.1f}]")
+    # Dequantize ONLY the final layer7 output for decode.
+    # This matches run_iverilog_postprocess.py and the saved iverilog_output.npy.
+    feature_map = (feature_map.astype(np.float32) - LAYER7_DEQUANT_ZERO_POINT) / LAYER7_DEQUANT_SCALE
+    print(f"  Dequantized output: range=[{feature_map.min():.3f}, {feature_map.max():.3f}]")
 
     # Save processed output (post-scaled)
     np.save(os.path.join(WEIGHT_DIR, "fpga_output.npy"), feature_map)
