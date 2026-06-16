@@ -70,6 +70,10 @@ That's roughly a **28x speedup** over pure software.
 
 ![Detection result from FPGA](images/fpga_result.png)
 
+*Iverilog RTL simulation output:*
+
+![Iverilog simulation output](images/iverilog.png)
+
 ## Verilog Modules
 
 | File | What it does |
