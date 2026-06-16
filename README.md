@@ -53,7 +53,7 @@ The execution pipeline runs all convolutional layers (Layers 1-7) deeply pipelin
 
 This yields a **28x speedup** in convolutional inference time by utilizing the Programmable Logic.
 
-![FPGA Hardware Detection Result](../images/fpga_result.png)
+![FPGA Hardware Detection Result](images/fpga_result.png)
 
 ## Hardware Modules
 
