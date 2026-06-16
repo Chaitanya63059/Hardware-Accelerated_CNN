@@ -98,18 +98,6 @@ That's roughly a **28x speedup** over pure software.
 | `detection_utils.py` | Helper functions for NMS, IoU calculation, coordinate scaling. |
 | `config.py` | Shared constants (image size, class names, paths). |
 
-## Folder Structure
-
-```
-├── verilog/               # The 7 Verilog RTL source files
-├── ml/                    # Python training & quantization code
-├── fpga_python/           # Scripts to run on the KV260 board
-│   ├── run_fpga.py        # Main FPGA inference script
-│   ├── run_arm.py         # ARM-only baseline (for comparison)
-│   └── exported_weights/  # INT8 weights, biases, scales
-├── images/                # Result screenshots
-└── README.md
-```
 
 ## How to Run on the Kria KV260
 
